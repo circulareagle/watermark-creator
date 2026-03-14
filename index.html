@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Watermark Studio Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #000; color: white; margin: 0; overflow: hidden; }
+        
+        /* App Layout */
+        .app-container { height: 100vh; display: flex; flex-direction: column; }
+        .viewport { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: #111; overflow: hidden; }
+        
+        /* Professional Toolset Styling */
+        .tool-panel { background: #1a1a1a; border-top: 1px solid #333; padding-bottom: env(safe-area-inset-bottom); }
+        .tab-content { height: 180px; overflow-y: auto; padding: 20px; display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Custom Inputs */
+        input[type="range"] { -webkit-appearance: none; width: 100%; height: 4px; background: #333; border-radius: 2px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: #38bdf8; border-radius: 50%; cursor: pointer; border: 2px solid #fff; }
+        
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 0; color: #666; cursor: pointer; transition: 0.2s; }
+        .nav-item.active { color: #38bdf8; }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; }
+        .nav-item span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        canvas { max-width: 90%; max-height: 90%; object-fit: contain; box-shadow: 0 20px 50px rgba(0,0,0,0.5); background: #222; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Header -->
+    <header class="flex justify-between items-center px-4 h-14 bg-black/50 border-b border-white/10 z-50">
+        <span class="font-extrabold text-sm tracking-tighter">WM <span class="text-sky-400">STUDIO</span></span>
+        <div class="flex gap-3">
+            <label for="img-input" class="bg-white/10 px-4 py-1.5 rounded-full text-[11px] font-bold cursor-pointer hover:bg-white/20">IMPORT</label>
+            <input type="file" id="img-input" class="hidden" accept="image/*">
+            <button id="btn-export" class="bg-sky-500 px-4 py-1.5 rounded-full text-[11px] font-bold disabled:opacity-30">EXPORT</button>
+        </div>
+    </header>
+
+    <!-- Viewport -->
+    <div class="viewport">
+        <canvas id="main-canvas"></canvas>
+        <div id="no-img-hint" class="absolute text-center opacity-30 pointer-events-none">
+            <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <p class="text-xs font-bold uppercase tracking-widest">Select an image to start</p>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="tool-panel">
+        <!-- Sub Menus -->
+        <div id="content-tab" class="tab-content active">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-bold text-gray-500 uppercase block mb-2">Watermark Content</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="text-val" value="PREVIEW" class="flex-1 bg-black border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-sky-500">
+                        <label for="logo-input" class="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center cursor-pointer border border-white/10">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+                        </label>
+                        <input type="file" id="logo-input" class="hidden" accept="image/*">
+                    </div>
+                </div>
+                <div id="logo-indicator" class="hidden flex items-center justify-between bg-sky-500/10 p-2 rounded-lg border border-sky-500/20">
+                    <span class="text-[10px] text-sky-400 font-bold uppercase">Image Logo Active</span>
+                    <button id="remove-logo" class="text-[10px] text-red-400 font-bold uppercase">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="style-tab" class="tab-content">
+            <div class="grid grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <div class="flex justify-between mb-2"><span class="text-[10px] font-bold text-gray-500 uppercase">Opacity</span><span id="v-opacity" class="text-xs">50%</span></div>
+                        <input type="range" id="range-opacity" min="0" max="100" value="50">
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-2"><span class="text-[10px] font-bold text-gray-500 uppercase">Rotation</span><span id="v-rotate" class="text-xs">0°</span></div>
+                        <input type="range" id="range-rotate" min="-180" max="180" value="0">
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase block mb-2">Color</span>
+                        <input type="color" id="color-val" value="#ffffff" class="w-full h-8 bg-transparent border-none p-0 cursor-pointer">
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase block mb-2">Font</span>
+                        <select id="font-val" class="w-full bg-black border border-white/10 rounded p-1 text-xs">
+                            <option value="Arial">Sans</option>
+                            <option value="Georgia">Serif</option>
+                            <option value="Courier New">Mono</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="layout-tab" class="tab-content">
+            <div class="space-y-6">
+                <div class="flex gap-2 bg-black p-1 rounded-lg">
+                    <button id="mode-single" class="flex-1 py-1.5 text-[10px] font-bold rounded bg-white/10 text-sky-400 uppercase">Single</button>
+                    <button id="mode-tile" class="flex-1 py-1.5 text-[10px] font-bold rounded text-gray-500 uppercase">Tiled</button>
+                </div>
+                <div id="single-ctrls" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <span class="text-[10px] font-bold text-gray-500 uppercase block mb-2">Size</span>
+                        <input type="range" id="range-size" min="10" max="400" value="100">
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <div class="flex-1">
+                            <span class="text-[8px] text-gray-600 block text-center">X Pos</span>
+                            <input type="range" id="range-x" min="0" max="100" value="50">
+                        </div>
+                        <div class="flex-1">
+                            <span class="text-[8px] text-gray-600 block text-center">Y Pos</span>
+                            <input type="range" id="range-y" min="0" max="100" value="50">
+                        </div>
+                    </div>
+                </div>
+                <div id="tile-ctrls" class="hidden">
+                    <span class="text-[10px] font-bold text-gray-500 uppercase block mb-2">Pattern Spacing</span>
+                    <input type="range" id="range-spacing" min="50" max="800" value="250">
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="flex border-t border-white/5 bg-black">
+            <div class="nav-item active" onclick="showTab('content', this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                <span>Text</span>
+            </div>
+            <div class="nav-item" onclick="showTab('style', this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+                <span>Style</span>
+            </div>
+            <div class="nav-item" onclick="showTab('layout', this)">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                <span>Layout</span>
+            </div>
+        </nav>
+    </div>
+</div>
+
+<script>
+    const cvs = document.getElementById('main-canvas');
+    const ctx = cvs.getContext('2d');
+    
+    // Core State
+    const S = {
+        bg: null,
+        logo: null,
+        text: 'PREVIEW',
+        opacity: 0.5,
+        rotate: 0,
+        color: '#ffffff',
+        font: 'Arial',
+        scale: 1.0,
+        isTiled: false,
+        x: 50,
+        y: 50,
+        spacing: 250
+    };
+
+    // UI Elements
+    const elements = {
+        imgInput: document.getElementById('img-input'),
+        logoInput: document.getElementById('logo-input'),
+        exportBtn: document.getElementById('btn-export'),
+        noImgHint: document.getElementById('no-img-hint')
+    };
+
+    function init() {
+        // Initial Canvas Setup
+        cvs.width = 800;
+        cvs.height = 600;
+        draw();
+
+        // Listeners
+        elements.imgInput.onchange = (e) => loadFile(e, 'bg');
+        elements.logoInput.onchange = (e) => loadFile(e, 'logo');
+        
+        document.getElementById('text-val').oninput = (e) => { S.text = e.target.value; draw(); };
+        document.getElementById('remove-logo').onclick = () => { S.logo = null; document.getElementById('logo-indicator').classList.add('hidden'); draw(); };
+        
+        // Range mappings
+        mapRange('range-opacity', 'opacity', (v) => v / 100, 'v-opacity', '%');
+        mapRange('range-rotate', 'rotate', (v) => parseInt(v), 'v-rotate', '°');
+        mapRange('range-size', 'scale', (v) => v / 100);
+        mapRange('range-x', 'x');
+        mapRange('range-y', 'y');
+        mapRange('range-spacing', 'spacing');
+
+        document.getElementById('color-val').oninput = (e) => { S.color = e.target.value; draw(); };
+        document.getElementById('font-val').onchange = (e) => { S.font = e.target.value; draw(); };
+
+        // Modes
+        document.getElementById('mode-single').onclick = () => setMode(false);
+        document.getElementById('mode-tile').onclick = () => setMode(true);
+
+        document.getElementById('btn-export').onclick = () => {
+            if (!S.bg) return;
+            const link = document.createElement('a');
+            link.download = 'watermark.png';
+            link.href = cvs.toDataURL();
+            link.click();
+        };
+    }
+
+    function mapRange(id, key, transform = (v) => parseInt(v), labelId = null, suffix = '') {
+        const el = document.getElementById(id);
+        el.oninput = (e) => {
+            S[key] = transform(e.target.value);
+            if(labelId) document.getElementById(labelId).innerText = e.target.value + suffix;
+            draw();
+        };
+    }
+
+    function setMode(tiled) {
+        S.isTiled = tiled;
+        document.getElementById('mode-single').classList.toggle('bg-white/10', !tiled);
+        document.getElementById('mode-single').classList.toggle('text-sky-400', !tiled);
+        document.getElementById('mode-tile').classList.toggle('bg-white/10', tiled);
+        document.getElementById('mode-tile').classList.toggle('text-sky-400', tiled);
+        document.getElementById('single-ctrls').classList.toggle('hidden', tiled);
+        document.getElementById('tile-ctrls').classList.toggle('hidden', !tiled);
+        draw();
+    }
+
+    function showTab(id, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id + '-tab').classList.add('active');
+        btn.classList.add('active');
+    }
+
+    function loadFile(e, type) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (f) => {
+            const img = new Image();
+            img.onload = () => {
+                S[type] = img;
+                if(type === 'bg') {
+                    cvs.width = img.width;
+                    cvs.height = img.height;
+                    elements.noImgHint.style.display = 'none';
+                    elements.exportBtn.disabled = false;
+                } else {
+                    document.getElementById('logo-indicator').classList.remove('hidden');
+                }
+                draw();
+            };
+            img.src = f.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function stamp(x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(S.rotate * Math.PI / 180);
+        ctx.globalAlpha = S.opacity;
+
+        if (S.logo) {
+            const w = (cvs.width * 0.15) * S.scale;
+            const h = (S.logo.height / S.logo.width) * w;
+            ctx.drawImage(S.logo, -w/2, -h/2, w, h);
+        } else {
+            const fontSize = (cvs.width * 0.05) * S.scale;
+            ctx.font = `bold ${fontSize}px ${S.font}`;
+            ctx.fillStyle = S.color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(S.text, 0, 0);
+        }
+        ctx.restore();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        
+        if (S.bg) {
+            ctx.drawImage(S.bg, 0, 0);
+        } else {
+            ctx.fillStyle = '#222';
+            ctx.fillRect(0, 0, cvs.width, cvs.height);
+        }
+
+        if (S.isTiled) {
+            const gap = S.spacing * (cvs.width / 1000);
+            for(let x = 0; x < cvs.width + gap; x += gap) {
+                for(let y = 0; y < cvs.height + gap; y += gap) {
+                    stamp(x, y);
+                }
+            }
+        } else {
+            stamp((S.x / 100) * cvs.width, (S.y / 100) * cvs.height);
+        }
+    }
+
+    init();
+</script>
+
+</body>
+</html>
+
